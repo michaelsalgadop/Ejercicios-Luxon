@@ -33,8 +33,9 @@ const restar2MesesFechaActual = fechaDeAhoraSinFormatear
   .minus({ months: 2 })
   .toFormat("dd-MM-yyyy HH:mm");
 const zonaHorariaUTC = fechaDeAhoraSinFormatear.setZone("UTC");
-const zonaHorariaNuevaYork = fechaDeAhoraSinFormatear.setZone("EST");
-const zonaHorariaTokio = fechaDeAhoraSinFormatear.setZone("JST");
+const zonaHorariaNuevaYork =
+  fechaDeAhoraSinFormatear.setZone("America/New_York");
+const zonaHorariaTokio = fechaDeAhoraSinFormatear.setZone("Asia/Tokyo");
 const { days, hours, minutes } = Interval.fromDateTimes(
   Fecha.local(fechaDeAhoraSinFormatear.year, 5, 11),
   fechaDeAhoraSinFormatear
@@ -50,7 +51,7 @@ const fechaFutura = Fecha.local(fechaDeAhoraSinFormatear.year + 2, 5, 11);
 const fechaDeInicioDeTrabajo = Fecha.local(2021, 9, 13);
 const fechaDeFinDeTrabajo = Fecha.fromISO("2024-11-18T16:15:00");
 
-const getDiasDeTrabajo = () => {
+const calcularDiasLaborales = () => {
   const totalDias = Math.floor(
     Interval.fromDateTimes(fechaDeInicioDeTrabajo, fechaDeFinDeTrabajo)
       .splitBy({ day: 1 })
@@ -74,17 +75,61 @@ const getDiasDeTrabajo = () => {
 };
 
 const listarDiasDeUnMes = (anyo, mes) => {
-  const primerDia = Fecha.local(anyo, mes);
-  const ultimoDia = Fecha.local(anyo, mes, primerDia.daysInMonth).endOf("day");
-  const arrayDiasDelMes = Interval.fromDateTimes(primerDia, ultimoDia).splitBy({
-    day: 1,
-  });
-  return arrayDiasDelMes.map(
-    ({
-      start: { weekdayLong: diaSemana, day: numeroDia, monthLong: mes },
-    }) => ({ diaSemana, numeroDia, mes })
-  );
+  try {
+    if (typeof anyo !== "number") throw new Error("Año debe ser un entero!");
+    /*
+    Si mes es menor de 1, Math.max pillará el 1, ya que 1 será el número más grande.
+    Si mes es mayor de 12, Math.max pillará el número que es mayor que 12, pero después
+    el Math.min pillará el número que es menor, en este caso el 12. Y así no sale del rango.
+
+    Ejemplo: mes = 0, primero pasará por el Math.max, que hará el max? Pues comparar lo que
+    me ha venido por parámetro(mes que es 0) y el 1, cual es más grande el 0 o el 1? pues el 1.
+    Después pasará por el Math.min, ya tenemos el 1, ahora cual es menor, el 1 o el 12? El 1.
+    Pues entonces Math.min pillará el 1.
+
+    Otro caso: Ahora mes = 13, primero pasará por el Math.max, que hará el max? Pilla el 13,
+    porque es 13 es mayor que el 1(Math.max(13,1) => 13). Después pasa por el Math.min, cual
+    es menor entre 13 y 12? 12. Pues mes = 12.
+
+    Y si pasa normal? mes = 2. Pasa por el Math.max, 2 es mayor que 1? Si, pues coge el 2.
+    Ahora el Math.min, 2 es menor que 12? Si, pues mes = 2.
+
+    Y si es 12 pues agarra 12.
+    */
+    mes = Math.min(Math.max(mes, 1), 12);
+    const primerDia = Fecha.local(anyo, mes);
+    const ultimoDia = Fecha.local(anyo, mes, primerDia.daysInMonth).endOf(
+      "day"
+    ); // endOf Pilla hasta el final del dia, sino tenemos el error de que pilla hasta el día 30 teniendo 31 dias.
+    const arrayDiasDelMes = Interval.fromDateTimes(
+      primerDia,
+      ultimoDia
+    ).splitBy({
+      day: 1,
+    });
+    return arrayDiasDelMes.map(
+      ({
+        start: { weekdayLong: diaSemana, day: numeroDia, monthLong: mes },
+      }) => ({
+        diaSemana,
+        numeroDia,
+        mes,
+      })
+    );
+  } catch (error) {
+    console.log(error.message);
+  }
 };
+const listaFechasActualDiferentesIdiomas = (idiomas) =>
+  idiomas
+    .map(
+      (idioma) =>
+        `\t- ${idioma.toUpperCase()}: ${fechaDeAhoraSinFormatear
+          .setLocale(idioma)
+          .toFormat("DDDD")}`
+    )
+    .join("\n");
+
 let temporizador = Duration.fromObject({ minutes: 5, seconds: 0 });
 const cuentaAtras = () => {
   const stringTemporizador = `Tiempo restante temporizador: ${temporizador.minutes} minutos y ${temporizador.seconds} segundos`;
@@ -101,15 +146,21 @@ const contador = setInterval(() => console.log(`${cuentaAtras()}`), 1000);
 
 /** ¡¡¡¡¡¡¡¡¡BOLA EXTRA!!!!!!!! */
 
-const calcularDatosDeCumpleanyos = (fechaNacimiento) => {
+const obtenerDatosCumple = (fechaNacimiento) => {
   try {
     if (typeof fechaNacimiento !== "object" || !fechaNacimiento.isLuxonDateTime)
       throw new Error("La fecha introducida por parámetro no es de tipo fecha");
-    const fechaProximoCumpleanyos = Fecha.local(
-      fechaDeAhoraSinFormatear.year + 1,
+    const cumpleEsteAnyo = Fecha.local(
+      fechaDeAhoraSinFormatear.year,
       fechaNacimiento.month,
       fechaNacimiento.day
     );
+    // Comprobar si el cumpleaños ya ha pasado, antes de agregar un año.
+    // Si no ha pasado o incluso es hoy, pues pilla la variable cumpleEsteAnyo.
+    const fechaProximoCumpleanyos =
+      cumpleEsteAnyo < fechaDeAhoraSinFormatear
+        ? cumpleEsteAnyo.plus({ years: 1 })
+        : cumpleEsteAnyo;
     const {
       years: anyosQueTienes,
       months: mesesQueTienes,
@@ -163,7 +214,7 @@ console.log(
     fechaDeMiCumpleanyos.month === fechaFutura.month ? "SI" : "NO"
   }\n
   Días laborables (lunes a viernes) entre las fechas ${fechaDeInicioDeTrabajo} - y -
-  ${fechaDeFinDeTrabajo}: ${getDiasDeTrabajo()}\n
+  ${fechaDeFinDeTrabajo}: ${calcularDiasLaborales()}\n
   Lista de todas las fechas del mes de mayo del 2024: \n${listarDiasDeUnMes(
     2024,
     5
@@ -174,10 +225,8 @@ console.log(
     )
     .join("\n")}\n
   Formato personalizado con idiomas:
-  \t- Español: ${fechaDeAhoraSinFormatear.setLocale("es").toFormat("DDDD")}\n
-  \t- Francés: ${fechaDeAhoraSinFormatear.setLocale("fr").toFormat("DDDD")}\n
-  \t- Aleman: ${fechaDeAhoraSinFormatear.setLocale("de").toFormat("DDDD")}\n
+  ${listaFechasActualDiferentesIdiomas(["es", "fr", "de"])}\n
   Vamos a calcular algunos datos de tu fecha de cumpleaños:
-  ${calcularDatosDeCumpleanyos(Fecha.local(1999, 5, 11))}
+  ${obtenerDatosCumple(Fecha.local(1999, 5, 11))}
   `
 );
