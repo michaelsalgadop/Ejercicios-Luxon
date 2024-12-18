@@ -86,25 +86,18 @@ const listarDiasDeUnMes = (anyo, mes) => {
   );
 };
 let temporizador = Duration.fromObject({ minutes: 5, seconds: 0 });
-const descontador = Duration.fromObject({ seconds: 1 });
-const nuevoMinuto = Duration.fromObject({ minutes: -1, seconds: 59 });
 const cuentaAtras = () => {
-  if (temporizador.minutes >= 1 || temporizador.seconds > 0) {
-    if (temporizador.seconds === 0) {
-      temporizador = temporizador.plus(nuevoMinuto);
-    } else if (temporizador.minutes === 0 && temporizador.seconds === 1) {
-      temporizador = Duration.fromObject({ minutes: 0, seconds: 0 });
-      clearInterval(contador);
-    } else {
-      temporizador = temporizador.minus(descontador);
-    }
+  const stringTemporizador = `Tiempo restante temporizador: ${temporizador.minutes} minutos y ${temporizador.seconds} segundos`;
+  if (temporizador.minutes >= 1 && temporizador.seconds === 0) {
+    temporizador = temporizador.plus({ minutes: -1, seconds: 59 });
+  } else if (temporizador.seconds >= 1) {
+    temporizador = temporizador.minus({ seconds: 1 });
+  } else {
+    clearInterval(contador);
   }
-  return `${temporizador.minutes} minutos y ${temporizador.seconds} segundos`;
+  return stringTemporizador;
 };
-const contador = setInterval(() => {
-  const cuentaAtrasString = cuentaAtras();
-  console.log(`Tiempo restante temporizador: ${cuentaAtrasString}`);
-}, 1000);
+const contador = setInterval(() => console.log(`${cuentaAtras()}`), 1000);
 console.log(
   `
   Fecha ahora (sin formatear): ${fechaDeAhoraSinFormatear}\n
