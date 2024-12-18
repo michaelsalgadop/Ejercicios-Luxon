@@ -1,0 +1,149 @@
+import { Duration, DateTime as Fecha, Interval } from "../plugins/luxon.js";
+
+const fechaDeAhoraSinFormatear = Fecha.now();
+
+const fechaDeAhoraISO = fechaDeAhoraSinFormatear.toISO();
+
+const fechaDeAhoraSolo = fechaDeAhoraSinFormatear.toFormat("dd-MM-yyyy");
+
+const horaDeFechaDeAhoraFormato12Horas =
+  fechaDeAhoraSinFormatear.toFormat("hh:mm:ss a");
+
+const fechaEspecifica = Fecha.local(2023, 3, 15, 14, 30);
+
+const diaDeSemanaFechaEspecifica = fechaEspecifica.weekdayLong;
+
+const fechaEspecificaFormateada = fechaEspecifica.toFormat("MMMM dd, yyyy");
+
+const numeroDeDiasParaEl1DeEneroDelProximoAnyo = Math.floor(
+  Interval.fromDateTimes(
+    fechaDeAhoraSinFormatear,
+    Fecha.local(fechaDeAhoraSinFormatear.year + 1, 1, 1)
+  ).length("days")
+);
+
+/* INTERMEDIOS */
+const sumarDiasHorasFechaActual = fechaDeAhoraSinFormatear
+  .plus({
+    days: 7,
+    hours: 3,
+  })
+  .toFormat("dd-MM-yyyy HH:mm");
+const restar2MesesFechaActual = fechaDeAhoraSinFormatear
+  .minus({ months: 2 })
+  .toFormat("dd-MM-yyyy HH:mm");
+const zonaHorariaUTC = fechaDeAhoraSinFormatear.setZone("UTC");
+const zonaHorariaNuevaYork = fechaDeAhoraSinFormatear.setZone("EST");
+const zonaHorariaTokio = fechaDeAhoraSinFormatear.setZone("JST");
+const { days, hours, minutes } = Interval.fromDateTimes(
+  Fecha.local(fechaDeAhoraSinFormatear.year, 5, 11),
+  fechaDeAhoraSinFormatear
+)
+  .toDuration(["days", "hours", "minutes"])
+  .toObject();
+const fechaDeMiCumpleanyos = Fecha.local(fechaDeAhoraSinFormatear.year, 5, 11);
+const fechaFutura = Fecha.local(fechaDeAhoraSinFormatear.year + 2, 5, 11);
+// En esta comparación, no usaremos hasSame porque son distintos años, y aunque tengan el mismo mes o día, siempre dirá que es false.
+// Lo compararemos a pelo -> fechaDeMiCumpleanyos.month === fechaFutura.month
+
+/* ¡¡¡¡¡¡¡¡¡¡AVANZADOS!!!!!!!!!! */
+const fechaDeInicioDeTrabajo = Fecha.local(2021, 9, 13);
+const fechaDeFinDeTrabajo = Fecha.fromISO("2024-11-18T16:15:00");
+
+const getDiasDeTrabajo = () => {
+  const totalDias = Math.floor(
+    Interval.fromDateTimes(fechaDeInicioDeTrabajo, fechaDeFinDeTrabajo)
+      .splitBy({ day: 1 })
+      .reduce(
+        (
+          acumulador,
+          {
+            start: {
+              c: { day: dia, month: mes, year: anyo },
+            },
+          }
+        ) =>
+          Fecha.local(anyo, mes, dia).weekday !== 6 &&
+          Fecha.local(anyo, mes, dia).weekday !== 7
+            ? ++acumulador
+            : acumulador,
+        0
+      )
+  );
+  return totalDias;
+};
+
+const listarDiasDeUnMes = (anyo, mes) => {
+  const primerDia = Fecha.local(anyo, mes);
+  const ultimoDia = Fecha.local(anyo, mes, primerDia.daysInMonth).endOf("day");
+  const arrayDiasDelMes = Interval.fromDateTimes(primerDia, ultimoDia).splitBy({
+    day: 1,
+  });
+  return arrayDiasDelMes.map(
+    ({
+      start: { weekdayLong: diaSemana, day: numeroDia, monthLong: mes },
+    }) => ({ diaSemana, numeroDia, mes })
+  );
+};
+let temporizador = Duration.fromObject({ minutes: 5, seconds: 0 });
+const descontador = Duration.fromObject({ seconds: 1 });
+const nuevoMinuto = Duration.fromObject({ minutes: -1, seconds: 59 });
+const cuentaAtras = () => {
+  if (temporizador.minutes >= 1 || temporizador.seconds > 0) {
+    if (temporizador.seconds === 0) {
+      temporizador = temporizador.plus(nuevoMinuto);
+    } else if (temporizador.minutes === 0 && temporizador.seconds === 1) {
+      temporizador = Duration.fromObject({ minutes: 0, seconds: 0 });
+      clearInterval(contador);
+    } else {
+      temporizador = temporizador.minus(descontador);
+    }
+  }
+  return `${temporizador.minutes} minutos y ${temporizador.seconds} segundos`;
+};
+const contador = setInterval(() => {
+  const cuentaAtrasString = cuentaAtras();
+  console.log(`Tiempo restante temporizador: ${cuentaAtrasString}`);
+}, 1000);
+console.log(
+  `
+  Fecha ahora (sin formatear): ${fechaDeAhoraSinFormatear}\n
+  Fecha ISO estándar: ${fechaDeAhoraISO}\n
+  Sólo la fecha (dd-MM-yyyy): ${fechaDeAhoraSolo}\n
+  Hora en formato de 12 horas (AM/PM): ${horaDeFechaDeAhoraFormato12Horas}\n
+  Objeto DateTime para el 15 de marzo de 2023 a las 14:30 horas: ${fechaEspecifica}\n
+  Día de la semana de la fecha específica: ${diaDeSemanaFechaEspecifica}\n
+  Formatea la fecha en el formato MMMM dd, yyyy: ${fechaEspecificaFormateada}\n
+  Días que faltan para el 1 de enero del próximo año: ${numeroDeDiasParaEl1DeEneroDelProximoAnyo}\n
+  Sumar 7 días y 3 horas a la fecha actual: ${sumarDiasHorasFechaActual}\n
+  Restar 2 meses de la fecha actual: ${restar2MesesFechaActual}\n
+  Zona horaria UTC: ${zonaHorariaUTC}\n
+  Zona horaria Nueva York: ${zonaHorariaNuevaYork}\n
+  Zona horaria Tokio: ${zonaHorariaTokio}\n
+  Tiempo que ha pasado desde tu última fecha de cumpleaños hasta hoy: ${days} días, ${hours} horas y ${Math.floor(
+    minutes
+  )} minutos.\n
+  Cuál de las fechas es más reciente, (${fechaDeMiCumpleanyos} - O - ${fechaFutura}): ${
+    fechaDeMiCumpleanyos < fechaFutura ? fechaFutura : fechaDeMiCumpleanyos
+  }\n
+  Ambas fechas (${fechaDeMiCumpleanyos} - y - ${fechaFutura}) están en el mismo mes? ${
+    fechaDeMiCumpleanyos.month === fechaFutura.month ? "SI" : "NO"
+  }\n
+  Días laborables (lunes a viernes) entre las fechas ${fechaDeInicioDeTrabajo} - y -
+  ${fechaDeFinDeTrabajo}: ${getDiasDeTrabajo()}\n
+  Lista de todas las fechas del mes de mayo del 2024: \n${listarDiasDeUnMes(
+    2024,
+    5
+  )
+    .map(
+      ({ diaSemana, numeroDia, mes }) =>
+        `\t- ${diaSemana}, ${numeroDia} de ${mes}`
+    )
+    .join("\n")}\n
+  Formato personalizado con idiomas:
+  \t- Español: ${fechaDeAhoraSinFormatear.setLocale("es").toFormat("DDDD")}\n
+  \t- Francés: ${fechaDeAhoraSinFormatear.setLocale("fr").toFormat("DDDD")}\n
+  \t- Aleman: ${fechaDeAhoraSinFormatear.setLocale("de").toFormat("DDDD")}\n
+
+  `
+);
