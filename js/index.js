@@ -98,6 +98,46 @@ const cuentaAtras = () => {
   return stringTemporizador;
 };
 const contador = setInterval(() => console.log(`${cuentaAtras()}`), 1000);
+
+/** ¡¡¡¡¡¡¡¡¡BOLA EXTRA!!!!!!!! */
+
+const calcularDatosDeCumpleanyos = (fechaNacimiento) => {
+  try {
+    if (typeof fechaNacimiento !== "object" || !fechaNacimiento.isLuxonDateTime)
+      throw new Error("La fecha introducida por parámetro no es de tipo fecha");
+    const fechaProximoCumpleanyos = Fecha.local(
+      fechaDeAhoraSinFormatear.year + 1,
+      fechaNacimiento.month,
+      fechaNacimiento.day
+    );
+    const {
+      years: anyosQueTienes,
+      months: mesesQueTienes,
+      days: diasQueTienes,
+    } = Interval.fromDateTimes(fechaNacimiento, fechaDeAhoraSinFormatear)
+      .toDuration(["years", "months", "days"])
+      .toObject();
+    const { days: diasQueFaltanProximoCumpleanyos } = Interval.fromDateTimes(
+      fechaDeAhoraSinFormatear,
+      fechaProximoCumpleanyos
+    )
+      .toDuration("days")
+      .toObject();
+    const diaDeLaSemanaProximoCumpleanyos = fechaProximoCumpleanyos.weekdayLong;
+    return `
+    \t- Tu edad exacta es: ${anyosQueTienes} años, ${mesesQueTienes} meses y ${Math.floor(
+      diasQueTienes
+    )} dias.
+    \t- Faltan para tu próximo cumpleaños: ${Math.floor(
+      diasQueFaltanProximoCumpleanyos
+    )} dias.
+    \t- Día de la semana de tu próximo cumpleaños: ${diaDeLaSemanaProximoCumpleanyos}.
+    `;
+  } catch (e) {
+    console.log(e.message);
+  }
+};
+
 console.log(
   `
   Fecha ahora (sin formatear): ${fechaDeAhoraSinFormatear}\n
@@ -137,6 +177,7 @@ console.log(
   \t- Español: ${fechaDeAhoraSinFormatear.setLocale("es").toFormat("DDDD")}\n
   \t- Francés: ${fechaDeAhoraSinFormatear.setLocale("fr").toFormat("DDDD")}\n
   \t- Aleman: ${fechaDeAhoraSinFormatear.setLocale("de").toFormat("DDDD")}\n
-
+  Vamos a calcular algunos datos de tu fecha de cumpleaños:
+  ${calcularDatosDeCumpleanyos(Fecha.local(1999, 5, 11))}
   `
 );
